@@ -11,7 +11,59 @@ set(WOW64_MAIN_SRC
     "${BOX64_ROOT}/wow64/wowbox64.c"
 )
 
-set_source_files_properties(${DYNAREC_ASM} PROPERTIES COMPILE_OPTIONS "-mcpu=cortex-a76")
+# Detectar se estamos construindo em uma plataforma ARM64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    message(STATUS "Configurando para ARM64...")
+    set(ARM64_COMPILE_OPTIONS "-march=armv8-a")
+    
+    # Verificar suporte a extensões ARM64
+    include(CheckCCompilerFlag)
+    
+    # Verificar SVE
+    check_c_compiler_flag("-march=armv8-a+sve" HAVE_SVE)
+    if(HAVE_SVE)
+        message(STATUS "SVE suportado pelo compilador")
+        set(ARM64_COMPILE_OPTIONS "${ARM64_COMPILE_OPTIONS}+sve")
+    endif()
+    
+    # Verificar SVE2
+    check_c_compiler_flag("-march=armv8.2-a+sve2" HAVE_SVE2)
+    if(HAVE_SVE2)
+        message(STATUS "SVE2 suportado pelo compilador")
+        set(ARM64_COMPILE_OPTIONS "${ARM64_COMPILE_OPTIONS}+sve2")
+    endif()
+    
+    # Outras extensões
+    check_c_compiler_flag("-march=armv8.6-a+bf16" HAVE_BF16)
+    if(HAVE_BF16)
+        message(STATUS "BF16 suportado pelo compilador")
+        set(ARM64_COMPILE_OPTIONS "${ARM64_COMPILE_OPTIONS}+bf16")
+    endif()
+    
+    check_c_compiler_flag("-march=armv8.6-a+i8mm" HAVE_I8MM)
+    if(HAVE_I8MM)
+        message(STATUS "I8MM suportado pelo compilador")
+        set(ARM64_COMPILE_OPTIONS "${ARM64_COMPILE_OPTIONS}+i8mm")
+    endif()
+    
+    # Otimizações para cores específicos
+    option(OPTIMIZE_FOR_CORTEX_A76 "Otimizar para Cortex-A76" OFF)
+    if(OPTIMIZE_FOR_CORTEX_A76)
+        set_source_files_properties(${DYNAREC_ASM} PROPERTIES COMPILE_OPTIONS "-mcpu=cortex-a76")
+    else()
+        set_source_files_properties(${DYNAREC_ASM} PROPERTIES COMPILE_OPTIONS "-mcpu=cortex-a76")
+    endif()
+    
+    # Otimizações para Apple Silicon
+    if(APPLE)
+        message(STATUS "Detectado Apple Silicon, aplicando otimizações...")
+        # Aplicar flags específicas para Apple Silicon
+        add_compile_definitions(ARM64_APPLE_SILICON)
+    endif()
+else()
+    # Configuração padrão para outras plataformas
+    set_source_files_properties(${DYNAREC_ASM} PROPERTIES COMPILE_OPTIONS "-mcpu=cortex-a76")
+endif()
 
 foreach(STEP_VALUE RANGE 3)
     add_library(wow64_dynarec_pass${STEP_VALUE} OBJECT ${DYNAREC_PASS})
@@ -61,6 +113,12 @@ include_directories(
     "${BOX64_ROOT}/src/include"
     "${BOX64_ROOT}/src"
 )
+
+# Definições para ARM64
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+    add_compile_definitions(ARM64_ENHANCED_SIMD)
+    add_compile_definitions(ARM64_DYNAREC_PASS_OPTIMIZED)
+endif()
 
 # always enable DynaRec, only supports ARM64 for now.
 add_compile_definitions(DYNAREC ARM64)

@@ -27,6 +27,30 @@ extern int arm64_flagm;
 extern int arm64_flagm2;
 extern int arm64_frintts;
 extern int arm64_rndr;
+
+// Novas flags para otimizações de jogos em ARM64
+extern int arm64_game_mode;
+extern int arm64_enhanced_simd;
+extern int arm64_physics_opt;
+extern int arm64_neon_fma;
+
+// Novas flags de extensões ARM64 avançadas
+extern int arm64_sve;
+extern int arm64_sve2;
+extern int arm64_bf16;
+extern int arm64_i8mm;
+extern int arm64_predres;
+extern int arm64_sme;
+extern int arm64_sve_vl;
+
+// Configurações para dispositivos ARM64 específicos
+extern int arm64_snapdragon;
+extern int arm64_exynos;
+extern int arm64_apple;
+extern int arm64_ampere;
+extern int arm64_a76;
+extern int arm64_x1;
+
 #elif defined(RV64)
 extern int rv64_zba;
 extern int rv64_zbb;

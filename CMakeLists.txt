@@ -1857,3 +1857,61 @@ if(BOX32)
             -D TEST_REFERENCE=${CMAKE_SOURCE_DIR}/tests32/ref23.txt
             -P ${CMAKE_SOURCE_DIR}/runTest.cmake )
 endif()
+
+if(ARM64)
+    set(ASM_DEFS "")
+    set(DYNASM_DEFS "-D ARM64_DEFINE")
+    set(SRC_ASM 
+      src/dynarec/arm64/arm64_lock.S
+      src/dynarec/arm64/arm64_epilog.S
+      src/dynarec/arm64/arm64_prolog.S
+      src/dynarec/arm64/arm64_next.S)
+    set(SRC_DYNAREC
+      src/dynarec/arm64/arm64_immenc.c
+      src/dynarec/arm64/arm64_printer.c
+      src/dynarec/arm64/dynarec_arm64_00.c
+      src/dynarec/arm64/dynarec_arm64_0f.c
+      src/dynarec/arm64/dynarec_arm64_64.c
+      src/dynarec/arm64/dynarec_arm64_66.c
+      src/dynarec/arm64/dynarec_arm64_67.c
+      src/dynarec/arm64/dynarec_arm64_6664.c
+      src/dynarec/arm64/dynarec_arm64_660f.c
+      src/dynarec/arm64/dynarec_arm64_66f0.c
+      src/dynarec/arm64/dynarec_arm64_66f20f.c
+      src/dynarec/arm64/dynarec_arm64_66f30f.c
+      src/dynarec/arm64/dynarec_arm64_67_32.c
+      src/dynarec/arm64/dynarec_arm64_6764_32.c
+      src/dynarec/arm64/dynarec_arm64_67_avx.c
+      src/dynarec/arm64/dynarec_arm64_avx.c
+      src/dynarec/arm64/dynarec_arm64_avx_0f.c
+      src/dynarec/arm64/dynarec_arm64_avx_0f38.c
+      src/dynarec/arm64/dynarec_arm64_avx_66_0f.c
+      src/dynarec/arm64/dynarec_arm64_avx_66_0f38.c
+      src/dynarec/arm64/dynarec_arm64_avx_66_0f3a.c
+      src/dynarec/arm64/dynarec_arm64_avx_f2_0f.c
+      src/dynarec/arm64/dynarec_arm64_avx_f2_0f38.c
+      src/dynarec/arm64/dynarec_arm64_avx_f2_0f3a.c
+      src/dynarec/arm64/dynarec_arm64_avx_f3_0f.c
+      src/dynarec/arm64/dynarec_arm64_avx_f3_0f38.c
+      src/dynarec/arm64/dynarec_arm64_d8.c
+      src/dynarec/arm64/dynarec_arm64_d9.c
+      src/dynarec/arm64/dynarec_arm64_da.c
+      src/dynarec/arm64/dynarec_arm64_db.c
+      src/dynarec/arm64/dynarec_arm64_dc.c
+      src/dynarec/arm64/dynarec_arm64_dd.c
+      src/dynarec/arm64/dynarec_arm64_de.c
+      src/dynarec/arm64/dynarec_arm64_df.c
+      src/dynarec/arm64/dynarec_arm64_emit_logic.c
+      src/dynarec/arm64/dynarec_arm64_emit_math.c
+      src/dynarec/arm64/dynarec_arm64_emit_shift.c
+      src/dynarec/arm64/dynarec_arm64_emit_tests.c
+      src/dynarec/arm64/dynarec_arm64_f0.c
+      src/dynarec/arm64/dynarec_arm64_f20f.c
+      src/dynarec/arm64/dynarec_arm64_f30f.c
+      src/dynarec/arm64/dynarec_arm64_functions.c
+      src/dynarec/arm64/dynarec_arm64_helper.c
+      src/dynarec/arm64/dynarec_arm64_jmpnext.c
+      src/dynarec/arm64/dynarec_arm64_arch.c
+      src/arm64_features.c
+    )
+endif()
