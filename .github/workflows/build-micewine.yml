@@ -1,0 +1,104 @@
+name: Build Box64 with ARM64 Support
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-matrix:
+    name: Build ${{ matrix.platform }}-${{ matrix.type }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ARM64
+            type: Release
+            wine: ON
+            runner: ubuntu-latest
+            name: MiceWine-Release
+            
+          - platform: ARM64
+            type: Release
+            wine: OFF
+            runner: ubuntu-latest
+            name: Release
+            
+          - platform: ARM64
+            type: Trace
+            wine: OFF
+            runner: ubuntu-latest
+            name: Trace
+            
+          - platform: ARM64
+            type: StaticBuild
+            wine: OFF
+            runner: ubuntu-latest
+            name: StaticBuild
+            
+          - platform: ARM64
+            type: Box32
+            wine: OFF
+            runner: ubuntu-latest
+            name: Box32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential git gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+    - name: Configure CMake for ${{ matrix.platform }}-${{ matrix.name }}
+      run: |
+        mkdir -p build
+        cd build
+        
+        CMAKE_ARGS="-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+        CMAKE_ARGS="${CMAKE_ARGS} -D${{ matrix.platform }}=1"
+        CMAKE_ARGS="${CMAKE_ARGS} -DMICE_WINE=${{ matrix.wine }}"
+        CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc"
+        CMAKE_ARGS="${CMAKE_ARGS} -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++"
+        
+        # Adiciona suporte às extensões ARM64 que implementamos
+        CMAKE_ARGS="${CMAKE_ARGS} -DARM64_ENHANCED_SIMD=ON"
+        CMAKE_ARGS="${CMAKE_ARGS} -DARM64_PHYSICS_OPT=ON" 
+        CMAKE_ARGS="${CMAKE_ARGS} -DARM64_NEON_FMA=ON"
+        
+        # Configurações específicas para cada tipo de build
+        if [ "${{ matrix.type }}" = "Trace" ]; then
+          CMAKE_ARGS="${CMAKE_ARGS} -DHAVE_TRACE=1"
+        elif [ "${{ matrix.type }}" = "StaticBuild" ]; then
+          CMAKE_ARGS="${CMAKE_ARGS} -DSTATICBUILD=1"
+        elif [ "${{ matrix.type }}" = "Box32" ]; then
+          CMAKE_ARGS="${CMAKE_ARGS} -DBOX32=1"
+        fi
+        
+        echo "Configurando com: ${CMAKE_ARGS}"
+        cmake .. ${CMAKE_ARGS}
+
+    - name: Build ${{ matrix.platform }}-${{ matrix.name }}
+      run: |
+        cd build
+        make -j$(nproc)
+        
+    - name: Package artifact
+      run: |
+        mkdir -p artifacts
+        if [ -f "build/box64" ]; then
+          cp build/box64 artifacts/box64-${{ matrix.platform }}-${{ matrix.name }}
+        fi
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: box64-${{ matrix.platform }}-${{ matrix.name }}
+        path: artifacts/box64-${{ matrix.platform }}-${{ matrix.name }}
