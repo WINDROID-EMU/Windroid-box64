@@ -90,7 +90,7 @@ jobs:
               echo "BOX64_PLATFORM_MARCRO=-DANDROID=1 -DARM_DYNAREC=1 -DBAD_SIGNAL=1" >> $GITHUB_ENV
               git clone https://github.com/termux/termux-docker.git
               sudo cp -rf termux-docker/system/arm /system
-              sudo chown -R $(whoami):$(whoami) /system
+              sudo chown -R $(whoami ):$(whoami) /system
               sudo chmod 755 -R /system
             elif [[ ${{ matrix.platform }} == 'ANDROID_GLIBC' ]]; then
               sudo apt-get -y install git gcc-aarch64-linux-gnu
@@ -115,7 +115,7 @@ jobs:
               tar -xf data.tar.xz
               sudo cp -rf data /
               sudo chmod 755 -R /data
-              sudo chown -R $(whoami):$(whoami) /data
+              sudo chown -R $(whoami ):$(whoami) /data
               echo "CFLAGS=-L/data/data/com.termux/files/usr/lib" >> $GITHUB_ENV
               echo "IS_TERMUX=1" >> $GITHUB_ENV
               echo "QEMU_SET_ENV=LD_LIBRARY_PATH=/data/data/com.termux/files/usr/lib" >> $GITHUB_ENV
@@ -206,7 +206,7 @@ jobs:
         run: |
           cd xuantie_qemu
           ./configure --prefix=$GITHUB_WORKSPACE/xuantie_qemu_install --target-list=riscv64-linux-user --disable-system
-          make -j$(nproc)
+          make -j$(nproc )
           make install
 
       - name: "Display Build info"
@@ -244,7 +244,7 @@ jobs:
           fi
 
           cd build
-          export CTEST_OPTIONS="-j$(nproc) --timeout 120 --output-on-failure --repeat until-pass:20"
+          export CTEST_OPTIONS="-j$(nproc ) --timeout 120 --output-on-failure --repeat until-pass:20"
           if [[ ${{ matrix.platform }} == 'RISCV' ]]; then
             export INTERPRETER=qemu-riscv64-static
             export QEMU_LD_PREFIX=/usr/riscv64-linux-gnu/
@@ -331,7 +331,7 @@ jobs:
 
           cp box64 files/usr/bin
 
-          echo "name=Box64 (CI Build)" > pkg-header
+          echo "name=Box64 (CI Build )" > pkg-header
           echo "category=Box64" >> pkg-header
           echo "version=${BOX64_VERSION}-${SHORT_COMMIT}" >> pkg-header
           echo "architecture=aarch64" >> pkg-header
@@ -353,9 +353,21 @@ jobs:
           name: box64-MiceWine-${{ matrix.type }}
           path: build/box64-latest.rat
 
+      - name: "Upload Rat File to Release"
+        if: matrix.platform == 'ANDROID' && matrix.type == 'Release' && github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: build/box64-latest.rat
+          asset_name: box64-latest-micewine.rat
+          asset_content_type: application/octet-stream
+
       - name: "Upload WowBox64 file"
         if: matrix.platform == 'WOW64' && matrix.type == 'Release'
         uses: actions/upload-artifact@v4
         with:
           name: wowbox64-${{ matrix.type }}
           path: build/wowbox64-prefix/src/wowbox64-build/wowbox64.dll
+          
