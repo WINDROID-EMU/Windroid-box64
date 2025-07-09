@@ -23,12 +23,24 @@
 #include "dynarec_arm64_private.h"
 #include "dynarec_arm64_functions.h"
 #include "../dynarec_helper.h"
+#include "arm64_regalloc.h"
+
+#ifdef DYNAREC_TRACE
+#include <inttypes.h>
+#define DYNAREC_LOG(ip, opcode, name) \
+    printf("[DYNAREC] Translating x86_64 @ 0x%" PRIxPTR ": opcode 0x%02x (%s)\n", (uintptr_t)(ip), (opcode), (name))
+#else
+#define DYNAREC_LOG(ip, opcode, name)
+#endif
 
 int isSimpleWrapper(wrapper_t fun);
 int isRetX87Wrapper(wrapper_t fun);
 
 uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int ninst, rex_t rex, int rep, int* ok, int* need_epilog)
 {
+    // Inicializa o estado dos registradores ARM64 para este bloco
+    init_arm64_reg_state(dyn);
+
     uint8_t nextop, opcode;
     uint8_t gd, ed;
     int8_t i8;
@@ -55,6 +67,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
 
     switch(opcode) {
         case 0x00:
+            DYNAREC_LOG(ip, opcode, "ADD Eb, Gb");
             INST_NAME("ADD Eb, Gb");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -64,15 +77,32 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             EBBACK;
             break;
         case 0x01:
+            DYNAREC_LOG(ip, opcode, "ADD Ed, Gd");
             INST_NAME("ADD Ed, Gd");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
-            GETGD;
-            GETED(0);
+            // Alocação dinâmica dos registradores x86 para ARM64
+            // gd = TO_NAT(((nextop & 0x38) >> 3) + (rex.r << 3));
+            // GETED(0);
+            {
+                int x86_gd = ((nextop & 0x38) >> 3) + (rex.r << 3);
+                int x86_ed = (MODREG) ? ((nextop & 7) + (rex.b << 3)) : -1;
+                gd = get_arm64_reg_for_x86(dyn, x86_gd, ninst, 0); // leitura
+                if (MODREG) {
+                    ed = get_arm64_reg_for_x86(dyn, x86_ed, ninst, 1); // escrita
+                    wback = 0;
+                } else {
+                    SMREAD();
+                    addr = geted(dyn, addr, ninst, nextop, &wback, x2, &fixedaddress, &unscaled, 0xfff << (2 + rex.w), (1 << (2 + rex.w)) - 1, rex, NULL, 0, 0);
+                    LDxw(x1, wback, fixedaddress);
+                    ed = x1;
+                }
+            }
             emit_add32(dyn, ninst, rex, ed, gd, x3, x4);
             WBACK;
             break;
         case 0x02:
+            DYNAREC_LOG(ip, opcode, "ADD Gb, Eb");
             INST_NAME("ADD Gb, Eb");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -82,6 +112,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             GBBACK;
             break;
         case 0x03:
+            DYNAREC_LOG(ip, opcode, "ADD Gd, Ed");
             INST_NAME("ADD Gd, Ed");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -90,6 +121,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             emit_add32(dyn, ninst, rex, gd, ed, x3, x4);
             break;
         case 0x04:
+            DYNAREC_LOG(ip, opcode, "ADD AL, Ib");
             INST_NAME("ADD AL, Ib");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             u8 = F8;
@@ -98,12 +130,14 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             BFIx(xRAX, x1, 0, 8);
             break;
         case 0x05:
+            DYNAREC_LOG(ip, opcode, "ADD EAX, Id");
             INST_NAME("ADD EAX, Id");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             i64 = F32S;
             emit_add32c(dyn, ninst, rex, xRAX, i64, x3, x4, x5);
             break;
         case 0x06:
+            DYNAREC_LOG(ip, opcode, "PUSH ES");
             if(rex.is32bits) {
                 INST_NAME("PUSH ES");
                 LDRH_U12(x1, xEmu, offsetof(x64emu_t, segs[_ES]));
@@ -113,6 +147,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             }
             break;
         case 0x07:
+            DYNAREC_LOG(ip, opcode, "POP ES");
             if(rex.is32bits) {
                 INST_NAME("POP ES");
                 POP1_32(x1);
@@ -123,6 +158,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             }
             break;
         case 0x08:
+            DYNAREC_LOG(ip, opcode, "OR Eb, Gb");
             INST_NAME("OR Eb, Gb");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -145,6 +181,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             }
             break;
         case 0x09:
+            DYNAREC_LOG(ip, opcode, "OR Ed, Gd");
             INST_NAME("OR Ed, Gd");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -154,6 +191,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             WBACK;
             break;
         case 0x0A:
+            DYNAREC_LOG(ip, opcode, "OR Gb, Eb");
             INST_NAME("OR Gb, Eb");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -169,6 +207,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             }
             break;
         case 0x0B:
+            DYNAREC_LOG(ip, opcode, "OR Gd, Ed");
             INST_NAME("OR Gd, Ed");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             nextop = F8;
@@ -177,6 +216,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             emit_or32(dyn, ninst, rex, gd, ed, x3, x4);
             break;
         case 0x0C:
+            DYNAREC_LOG(ip, opcode, "OR AL, Ib");
             INST_NAME("OR AL, Ib");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             u8 = F8;
@@ -195,6 +235,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             }
             break;
         case 0x0D:
+            DYNAREC_LOG(ip, opcode, "OR EAX, Id");
             INST_NAME("OR EAX, Id");
             SETFLAGS(X_ALL, SF_SET_PENDING);
             i64 = F32S;
@@ -4226,5 +4267,7 @@ uintptr_t dynarec64_00(dynarec_arm_t* dyn, uintptr_t addr, uintptr_t ip, int nin
             DEFAULT;
     }
 
-     return addr;
+    // Ao final do bloco, faz flush dos registradores ARM64 para memória x86
+    flush_arm64_regs(dyn, ninst);
+    return addr;
 }

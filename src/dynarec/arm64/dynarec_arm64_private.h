@@ -6,7 +6,6 @@
 typedef struct x64emu_s x64emu_t;
 typedef struct dynablock_s dynablock_t;
 typedef struct instsize_s instsize_t;
-typedef struct box64env_s box64env_t;
 
 #define BARRIER_MAYBE   8
 
@@ -141,6 +140,15 @@ typedef struct instruction_arm64_s {
     flagcache_t         f_entry;    // flags status before the instruction begin
 } instruction_arm64_t;
 
+// Adicionando estrutura para alocação dinâmica de registradores ARM64
+
+typedef struct {
+    int x86_reg;   // -1 se livre, senão qual x86 está mapeado
+    int dirty;     // 1 se precisa ser salvo na memória x86
+} arm64_reg_state_t;
+
+#define ARM64_REG_COUNT 16 // Ajuste conforme o número de regs ARM64 disponíveis
+
 typedef struct dynarec_arm_s {
     instruction_arm64_t*insts;
     int32_t             size;
@@ -187,7 +195,7 @@ typedef struct dynarec_arm_s {
     int                 need_reloc; // does the dynablock need relocations
     int                 reloc_size;
     uint32_t*           relocs;
-    box64env_t*         env;
+    arm64_reg_state_t reg_state[ARM64_REG_COUNT]; // Estado dos registradores ARM64 para alocação dinâmica
 } dynarec_arm_t;
 
 void add_next(dynarec_arm_t *dyn, uintptr_t addr);
