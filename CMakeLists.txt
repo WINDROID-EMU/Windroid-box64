@@ -46,6 +46,7 @@ option(BOX32_BINFMT "Also setup binfmt integration for box32" ${BOX32_BINFMT})
 option(LARCH64_ABI_1 "Set to ON if building for Loongarch64 ABI 1.0 system" ${LARCH64_ABI_1})
 option(GDBJIT "Set to ON to enable GDB JIT support" ${GDBJIT})
 option(WOW64 "Set to ON if you want a WOW64 PE build in addition")
+option(DYNAREC_TRACE "Enable dynarec translation tracing logs" OFF)
 
 if(TERMUX)
     set(TERMUX_PATH "/data/data/com.termux/files")
@@ -1910,4 +1911,8 @@ if(BOX32)
             -D TEST_ARGS=${CMAKE_SOURCE_DIR}/tests32/test23 -D TEST_OUTPUT=tmpfile32_23.txt
             -D TEST_REFERENCE=${CMAKE_SOURCE_DIR}/tests32/ref23.txt
             -P ${CMAKE_SOURCE_DIR}/runTest.cmake )
+endif()
+
+if(DYNAREC_TRACE)
+    add_definitions(-DDYNAREC_TRACE)
 endif()
